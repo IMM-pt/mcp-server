@@ -1,3 +1,4 @@
+const fetch = require("node-fetch");
 // MCP SERVER
 const { Server } = require("@modelcontextprotocol/sdk/server");
 const mcpServer = new Server();
