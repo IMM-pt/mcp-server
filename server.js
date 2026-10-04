@@ -1,3 +1,36 @@
+// MCP SERVER
+const { Server } = require("@modelcontextprotocol/sdk/server");
+const mcpServer = new Server();
+mcpServer.addCommand({
+  name: "render",
+  description: "Render HTML to PDF",
+  inputSchema: {
+    type: "object",
+    properties: {
+      html: { type: "string" },
+      filename: { type: "string" }
+    },
+    required: ["html"]
+  },
+  outputSchema: {
+    type: "object",
+    properties: {
+      downloadUrl: { type: "string" }
+    }
+  },
+  handler: async ({ html, filename }) => {
+    const response = await fetch("https://web-production-32241.up.railway.app/render", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ html, filename })
+    });
+
+    const data = await response.json();
+    return data;
+  }
+});
+
+//Express
 const express = require("express");
 const pdf = require("html-pdf-node");
 
@@ -38,6 +71,7 @@ app.get("/", (req, res) => {
 });
 
 // Arranque do servidor
+mcpServer.start();
 app.listen(process.env.PORT || 3000, () => {
   console.log("MCP server running");
 });
