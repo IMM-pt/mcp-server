@@ -1,10 +1,12 @@
-// const htmlPdf = require("html-pdf-node");
+// FETCH
 const fetch = require("node-fetch");
-console.log("MCP server is starting...");
+
 // MCP SERVER
 const { Server } = require("@modelcontextprotocol/sdk/server");
 const mcpServer = new Server();
-mcpServer.addCommand({
+
+// Comando MCP (API atual)
+mcpServer.command({
   name: "render",
   description: "Render HTML to PDF",
   inputSchema: {
@@ -22,6 +24,8 @@ mcpServer.addCommand({
     }
   },
   handler: async ({ html, filename }) => {
+    console.log("MCP render command called");
+
     const response = await fetch("https://web-production-32241.up.railway.app/render", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -33,7 +37,7 @@ mcpServer.addCommand({
   }
 });
 
-//Express
+// EXPRESS
 const express = require("express");
 const pdf = require("html-pdf-node");
 
@@ -52,7 +56,7 @@ app.post("/mcp/generate_pdf", async (req, res) => {
 
     // Cria o PDF a partir do HTML recebido
     const file = { content: html };
-    // const pdfBuffer = await htmlPdf.generatePdf(...);
+
     const pdfBuffer = await pdf.generatePdf(file, {
       format: "A4",
       printBackground: true
@@ -73,11 +77,10 @@ app.get("/", (req, res) => {
   res.send("mcp-server alive");
 });
 
-// Arranque do servidor
+// Arranque do MCP
 mcpServer.start();
-console.log("MCP server is initializing commands...");
-console.log("Express server is starting...");
+
+// Arranque do Express
 app.listen(process.env.PORT || 3000, () => {
   console.log("MCP server running");
 });
-
