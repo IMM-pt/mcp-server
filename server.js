@@ -1,4 +1,5 @@
 const fetch = require("node-fetch");
+console.log("MCP server is starting...");
 // MCP SERVER
 const { Server } = require("@modelcontextprotocol/sdk/server");
 const mcpServer = new Server();
@@ -73,6 +74,8 @@ app.get("/", (req, res) => {
 
 // Arranque do servidor
 mcpServer.start();
+console.log("MCP server is initializing commands...");
+console.log("Express server is starting...");
 app.listen(process.env.PORT || 3000, () => {
   console.log("MCP server running");
 });
