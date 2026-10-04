@@ -1,3 +1,4 @@
+// const htmlPdf = require("html-pdf-node");
 const fetch = require("node-fetch");
 console.log("MCP server is starting...");
 // MCP SERVER
@@ -51,7 +52,7 @@ app.post("/mcp/generate_pdf", async (req, res) => {
 
     // Cria o PDF a partir do HTML recebido
     const file = { content: html };
-
+    // const pdfBuffer = await htmlPdf.generatePdf(...);
     const pdfBuffer = await pdf.generatePdf(file, {
       format: "A4",
       printBackground: true
