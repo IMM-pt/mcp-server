@@ -1,12 +1,13 @@
-// FETCH
 const fetch = require("node-fetch");
+const express = require("express");
+const { PDFDocument, StandardFonts } = require("pdf-lib");
 
-// MCP SERVER
+// MCP SERVER (API nova)
 const { Server } = require("@modelcontextprotocol/sdk/server");
 const mcpServer = new Server();
 
-// Comando MCP (API atual)
-mcpServer.command({
+// TOOL (API nova)
+mcpServer.addTool({
   name: "render",
   description: "Render HTML to PDF",
   inputSchema: {
@@ -24,7 +25,7 @@ mcpServer.command({
     }
   },
   handler: async ({ html, filename }) => {
-    console.log("MCP render command called");
+    console.log("MCP tool 'render' called");
 
     const response = await fetch("https://web-production-32241.up.railway.app/render", {
       method: "POST",
@@ -32,55 +33,54 @@ mcpServer.command({
       body: JSON.stringify({ html, filename })
     });
 
-    const data = await response.json();
-    return data;
+    return await response.json();
   }
 });
 
 // EXPRESS
-const express = require("express");
-const pdf = require("html-pdf-node");
-
 const app = express();
-
-// Permite receber HTML grande
 app.use(express.json({ limit: "2mb" }));
 
-// Endpoint MCP para gerar PDF
+async function htmlToPdf(html) {
+  const pdfDoc = await PDFDocument.create();
+  const page = pdfDoc.addPage();
+  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+
+  const plainText = html.replace(/<[^>]+>/g, "");
+
+  page.drawText(plainText, {
+    x: 20,
+    y: page.getHeight() - 40,
+    size: 12,
+    font,
+    maxWidth: page.getWidth() - 40,
+    lineHeight: 14
+  });
+
+  return await pdfDoc.save();
+}
+
 app.post("/mcp/generate_pdf", async (req, res) => {
   try {
     const { html } = req.body || {};
-    if (!html) {
-      return res.status(400).json({ error: "html is required" });
-    }
+    if (!html) return res.status(400).json({ error: "html is required" });
 
-    // Cria o PDF a partir do HTML recebido
-    const file = { content: html };
+    const pdfBuffer = await htmlToPdf(html);
 
-    const pdfBuffer = await pdf.generatePdf(file, {
-      format: "A4",
-      printBackground: true
-    });
-
-    // Envia o PDF como binário
     res.setHeader("Content-Type", "application/pdf");
-    res.send(pdfBuffer);
-
+    res.send(Buffer.from(pdfBuffer));
   } catch (error) {
     console.error("PDF generation error:", error);
     res.status(500).json({ error: "Failed to generate PDF" });
   }
 });
 
-// Endpoint raiz
 app.get("/", (req, res) => {
   res.send("mcp-server alive");
 });
 
-// Arranque do MCP
+// Start MCP + Express
 mcpServer.start();
-
-// Arranque do Express
 app.listen(process.env.PORT || 3000, () => {
   console.log("MCP server running");
 });
