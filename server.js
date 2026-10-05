@@ -36,7 +36,7 @@ function createMcpServer() {
       console.log("MCP tool 'render' called");
 
       // Chama o endpoint /render do Railway (o teu PDF renderer)
-      const response = await fetch("https://mcp-server-production-8269.up.railway.app/render", {
+      const response = await fetch("https://mcp-server-production-8269.up.railway.app/mcp/generate_pdf", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ html, filename })
