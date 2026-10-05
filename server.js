@@ -1,41 +1,40 @@
 const fetch = require("node-fetch");
 const express = require("express");
 const { PDFDocument, StandardFonts } = require("pdf-lib");
+const { McpServer } = require("@modelcontextprotocol/sdk/server/mcp.js");
+const {
+  StreamableHTTPServerTransport
+} = require("@modelcontextprotocol/sdk/server/streamableHttp.js");
+const { z } = require("zod");
 
-// MCP SERVER (API nova)
-const { Server } = require("@modelcontextprotocol/sdk/server");
-const mcpServer = new Server();
+function createMcpServer() {
+  const mcpServer = new McpServer({ name: "mcp-server", version: "1.0.0" });
 
-// TOOL (API nova)
-mcpServer.addTool({
-  name: "render",
-  description: "Render HTML to PDF",
-  inputSchema: {
-    type: "object",
-    properties: {
-      html: { type: "string" },
-      filename: { type: "string" }
+  mcpServer.registerTool(
+    "render",
+    {
+      description: "Render HTML to PDF",
+      inputSchema: {
+        html: z.string(),
+        filename: z.string().optional()
+      }
     },
-    required: ["html"]
-  },
-  outputSchema: {
-    type: "object",
-    properties: {
-      downloadUrl: { type: "string" }
+    async ({ html, filename }) => {
+      console.log("MCP tool 'render' called");
+
+      const response = await fetch("https://web-production-32241.up.railway.app/render", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ html, filename })
+      });
+
+      const result = await response.json();
+      return { content: [{ type: "text", text: JSON.stringify(result) }] };
     }
-  },
-  handler: async ({ html, filename }) => {
-    console.log("MCP tool 'render' called");
+  );
 
-    const response = await fetch("https://web-production-32241.up.railway.app/render", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ html, filename })
-    });
-
-    return await response.json();
-  }
-});
+  return mcpServer;
+}
 
 // EXPRESS
 const app = express();
@@ -79,8 +78,28 @@ app.get("/", (req, res) => {
   res.send("mcp-server alive");
 });
 
-// Start MCP + Express
-mcpServer.start();
+app.post("/mcp", async (req, res) => {
+  const server = createMcpServer();
+  const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
+  res.on("close", () => {
+    transport.close();
+    server.close();
+  });
+  try {
+    await server.connect(transport);
+    await transport.handleRequest(req, res, req.body);
+  } catch (error) {
+    console.error("MCP request error:", error);
+    if (!res.headersSent) {
+      res.status(500).json({
+        jsonrpc: "2.0",
+        error: { code: -32603, message: "Internal server error" },
+        id: null
+      });
+    }
+  }
+});
+
 app.listen(process.env.PORT || 3000, () => {
   console.log("MCP server running");
 });
