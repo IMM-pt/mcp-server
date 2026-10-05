@@ -42,12 +42,21 @@ function createMcpServer() {
         body: JSON.stringify({ html, filename })
       });
 
-      const result = await response.json();
+      // RECEBE O PDF BINÁRIO
+      const pdfBuffer = await response.arrayBuffer();
+      // CONVERTE PARA BASE64
+      const base64 = Buffer.from(pdfBuffer).toString("base64");
 
-      // Conteúdo MCP
+      // DEVOLVE AO FOUNDRY Conteúdo MCP
       return {
         content: [
-          { type: "text", text: JSON.stringify(result) }
+          {
+            type: "text",
+            text: JSON.stringify({
+              filename,
+              base64
+            })
+          }
         ]
       };
     }
