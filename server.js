@@ -1,15 +1,28 @@
+// FETCH
 const fetch = require("node-fetch");
+
+// EXPRESS
 const express = require("express");
 const { PDFDocument, StandardFonts } = require("pdf-lib");
+
+// MCP SDK (API moderna)
 const { McpServer } = require("@modelcontextprotocol/sdk/server/mcp.js");
 const {
   StreamableHTTPServerTransport
 } = require("@modelcontextprotocol/sdk/server/streamableHttp.js");
+
 const { z } = require("zod");
 
+// ------------------------------------------------------
+// MCP SERVER (API moderna)
+// ------------------------------------------------------
 function createMcpServer() {
-  const mcpServer = new McpServer({ name: "mcp-server", version: "1.0.0" });
+  const mcpServer = new McpServer({
+    name: "mcp-server",
+    version: "1.0.0"
+  });
 
+  // TOOL: render
   mcpServer.registerTool(
     "render",
     {
@@ -22,6 +35,7 @@ function createMcpServer() {
     async ({ html, filename }) => {
       console.log("MCP tool 'render' called");
 
+      // Chama o endpoint /render do Railway (o teu PDF renderer)
       const response = await fetch("https://web-production-32241.up.railway.app/render", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -29,17 +43,26 @@ function createMcpServer() {
       });
 
       const result = await response.json();
-      return { content: [{ type: "text", text: JSON.stringify(result) }] };
+
+      // Conteúdo MCP
+      return {
+        content: [
+          { type: "text", text: JSON.stringify(result) }
+        ]
+      };
     }
   );
 
   return mcpServer;
 }
 
-// EXPRESS
+// ------------------------------------------------------
+// EXPRESS SERVER
+// ------------------------------------------------------
 const app = express();
 app.use(express.json({ limit: "2mb" }));
 
+// Função PDF local (para /mcp/generate_pdf)
 async function htmlToPdf(html) {
   const pdfDoc = await PDFDocument.create();
   const page = pdfDoc.addPage();
@@ -59,6 +82,7 @@ async function htmlToPdf(html) {
   return await pdfDoc.save();
 }
 
+// Endpoint antigo (mantido para compatibilidade)
 app.post("/mcp/generate_pdf", async (req, res) => {
   try {
     const { html } = req.body || {};
@@ -74,22 +98,31 @@ app.post("/mcp/generate_pdf", async (req, res) => {
   }
 });
 
+// Endpoint raiz
 app.get("/", (req, res) => {
   res.send("mcp-server alive");
 });
 
+// ------------------------------------------------------
+// ENDPOINT MCP OFICIAL PARA FOUNDRY
+// ------------------------------------------------------
 app.post("/mcp", async (req, res) => {
   const server = createMcpServer();
-  const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
+  const transport = new StreamableHTTPServerTransport({
+    sessionIdGenerator: undefined
+  });
+
   res.on("close", () => {
     transport.close();
     server.close();
   });
+
   try {
     await server.connect(transport);
     await transport.handleRequest(req, res, req.body);
   } catch (error) {
     console.error("MCP request error:", error);
+
     if (!res.headersSent) {
       res.status(500).json({
         jsonrpc: "2.0",
@@ -100,6 +133,9 @@ app.post("/mcp", async (req, res) => {
   }
 });
 
+// ------------------------------------------------------
+// ARRANQUE DO SERVIDOR
+// ------------------------------------------------------
 app.listen(process.env.PORT || 3000, () => {
   console.log("MCP server running");
 });
