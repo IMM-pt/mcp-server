@@ -4,7 +4,7 @@
 const fetch = require("node-fetch");
 
 // ------------------------------------------------------
-// PDF-LIB (para PDF local e para o futuro PDF-Compiler)
+// PDF-LIB (para PDF local e para o PDF-Compiler)
 // ------------------------------------------------------
 const { PDFDocument, StandardFonts } = require("pdf-lib");
 
@@ -32,7 +32,9 @@ function createMcpServer() {
     version: "1.0.0"
   });
 
-  // TOOL: render
+  // ------------------------------------------------------
+  // TOOL: render (HTML → PDF)
+  // ------------------------------------------------------
   mcpServer.registerTool(
     "render",
     {
@@ -116,7 +118,7 @@ function createMcpServer() {
 // EXPRESS SERVER
 // ------------------------------------------------------
 const app = express();
-app.use(express.json({ limit: "2mb" }));
+app.use(express.json({ limit: "10mb" }));
 
 // ------------------------------------------------------
 // Função PDF local (para /mcp/generate_pdf)
@@ -165,26 +167,6 @@ async function compilePdfBase64List(files) {
     filename: "relatorio-final.pdf",
     base64: mergedBase64
   };
-}
-
-// ------------------------------------------------------
-// Função utilitária: chama o compilador via endpoint MCP
-// ------------------------------------------------------
-async function callPdfCompiler(files) {
-  const response = await fetch(
-    "https://mcp-server-production-8269.up.railway.app/mcp/compile_pdf",
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ files })
-    }
-  );
-
-  if (!response.ok) {
-    throw new Error("Failed to call PDF compiler");
-  }
-
-  return await response.json(); // { filename, base64 }
 }
 
 // ------------------------------------------------------
