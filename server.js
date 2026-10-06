@@ -46,11 +46,14 @@ function createMcpServer() {
       console.log("MCP tool 'render' called");
 
       // Chama o endpoint /render do Railway (o teu PDF renderer)
-      const response = await fetch("https://mcp-server-production-8269.up.railway.app/mcp/generate_pdf", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ html, filename })
-      });
+      const response = await fetch(
+        "https://mcp-server-production-8269.up.railway.app/mcp/generate_pdf",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ html, filename })
+        }
+      );
 
       // RECEBE O PDF BINÁRIO
       const pdfBuffer = await response.arrayBuffer();
@@ -102,6 +105,36 @@ async function htmlToPdf(html) {
   });
 
   return await pdfDoc.save();
+}
+
+// ------------------------------------------------------
+// Função que junta vários PDFs (base64) num só PDF final
+// ------------------------------------------------------
+async function compilePdfBase64List(files) {
+  // Espera: files = [{ filename, base64 }]
+  const mergedPdf = await PDFDocument.create();
+
+  for (const file of files) {
+    const pdfBytes = Buffer.from(file.base64, "base64");
+    const pdfDoc = await PDFDocument.load(pdfBytes);
+
+    const copiedPages = await mergedPdf.copyPages(
+      pdfDoc,
+      pdfDoc.getPageIndices()
+    );
+
+    copiedPages.forEach((page) => {
+      mergedPdf.addPage(page);
+    });
+  }
+
+  const mergedBytes = await mergedPdf.save();
+  const mergedBase64 = Buffer.from(mergedBytes).toString("base64");
+
+  return {
+    filename: "relatorio-final.pdf",
+    base64: mergedBase64
+  };
 }
 
 // ------------------------------------------------------
@@ -165,3 +198,4 @@ app.post("/mcp", async (req, res) => {
 app.listen(process.env.PORT || 3000, () => {
   console.log("MCP server running");
 });
+
