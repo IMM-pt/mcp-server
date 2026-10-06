@@ -76,6 +76,48 @@ function createMcpServer() {
     }
   );
 
+  // ------------------------------------------------------
+  // TOOL: compile (junta vários PDFs num só)
+  // ------------------------------------------------------
+  mcpServer.registerTool(
+    "compile",
+    {
+      description: "Compila vários PDFs (base64) num único PDF final",
+      inputSchema: {
+        files: z.array(
+          z.object({
+            filename: z.string().optional(),
+            base64: z.string()
+          })
+        )
+      }
+    },
+    async ({ files }) => {
+      console.log("MCP tool 'compile' called");
+
+      // Chama o endpoint local /mcp/compile_pdf
+      const response = await fetch(
+        "https://mcp-server-production-8269.up.railway.app/mcp/compile_pdf",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ files })
+        }
+      );
+
+      const result = await response.json();
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify(result)
+          }
+        ]
+      };
+    }
+  );
+
   return mcpServer;
 }
 
