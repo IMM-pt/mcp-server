@@ -45,7 +45,6 @@ function createMcpServer() {
     async ({ html, filename }) => {
       console.log("MCP tool 'render' called");
 
-      // Chama o endpoint /render do Railway (o teu PDF renderer)
       const response = await fetch(
         "https://mcp-server-production-8269.up.railway.app/mcp/generate_pdf",
         {
@@ -55,21 +54,14 @@ function createMcpServer() {
         }
       );
 
-      // RECEBE O PDF BINÁRIO
       const pdfBuffer = await response.arrayBuffer();
-
-      // CONVERTE PARA BASE64
       const base64 = Buffer.from(pdfBuffer).toString("base64");
 
-      // DEVOLVE AO FOUNDRY Conteúdo MCP
       return {
         content: [
           {
             type: "text",
-            text: JSON.stringify({
-              filename,
-              base64
-            })
+            text: JSON.stringify({ filename, base64 })
           }
         ]
       };
@@ -95,7 +87,6 @@ function createMcpServer() {
     async ({ files }) => {
       console.log("MCP tool 'compile' called");
 
-      // Chama o endpoint local /mcp/compile_pdf
       const response = await fetch(
         "https://mcp-server-production-8269.up.railway.app/mcp/compile_pdf",
         {
@@ -153,7 +144,6 @@ async function htmlToPdf(html) {
 // Função que junta vários PDFs (base64) num só PDF final
 // ------------------------------------------------------
 async function compilePdfBase64List(files) {
-  // Espera: files = [{ filename, base64 }]
   const mergedPdf = await PDFDocument.create();
 
   for (const file of files) {
@@ -165,9 +155,7 @@ async function compilePdfBase64List(files) {
       pdfDoc.getPageIndices()
     );
 
-    copiedPages.forEach((page) => {
-      mergedPdf.addPage(page);
-    });
+    copiedPages.forEach((page) => mergedPdf.addPage(page));
   }
 
   const mergedBytes = await mergedPdf.save();
@@ -177,6 +165,26 @@ async function compilePdfBase64List(files) {
     filename: "relatorio-final.pdf",
     base64: mergedBase64
   };
+}
+
+// ------------------------------------------------------
+// Função utilitária: chama o compilador via endpoint MCP
+// ------------------------------------------------------
+async function callPdfCompiler(files) {
+  const response = await fetch(
+    "https://mcp-server-production-8269.up.railway.app/mcp/compile_pdf",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ files })
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error("Failed to call PDF compiler");
+  }
+
+  return await response.json(); // { filename, base64 }
 }
 
 // ------------------------------------------------------
