@@ -1,14 +1,21 @@
+// ------------------------------------------------------
 // FETCH
+// ------------------------------------------------------
 const fetch = require("node-fetch");
 
-//PDF-LIB
-const { PDFDocument } = require('pdf-lib');
-
-// EXPRESS
-const express = require("express");
+// ------------------------------------------------------
+// PDF-LIB (para PDF local e para o futuro PDF-Compiler)
+// ------------------------------------------------------
 const { PDFDocument, StandardFonts } = require("pdf-lib");
 
+// ------------------------------------------------------
+// EXPRESS
+// ------------------------------------------------------
+const express = require("express");
+
+// ------------------------------------------------------
 // MCP SDK (API moderna)
+// ------------------------------------------------------
 const { McpServer } = require("@modelcontextprotocol/sdk/server/mcp.js");
 const {
   StreamableHTTPServerTransport
@@ -47,6 +54,7 @@ function createMcpServer() {
 
       // RECEBE O PDF BINÁRIO
       const pdfBuffer = await response.arrayBuffer();
+
       // CONVERTE PARA BASE64
       const base64 = Buffer.from(pdfBuffer).toString("base64");
 
@@ -74,7 +82,9 @@ function createMcpServer() {
 const app = express();
 app.use(express.json({ limit: "2mb" }));
 
+// ------------------------------------------------------
 // Função PDF local (para /mcp/generate_pdf)
+// ------------------------------------------------------
 async function htmlToPdf(html) {
   const pdfDoc = await PDFDocument.create();
   const page = pdfDoc.addPage();
@@ -94,7 +104,9 @@ async function htmlToPdf(html) {
   return await pdfDoc.save();
 }
 
+// ------------------------------------------------------
 // Endpoint antigo (mantido para compatibilidade)
+// ------------------------------------------------------
 app.post("/mcp/generate_pdf", async (req, res) => {
   try {
     const { html } = req.body || {};
@@ -110,7 +122,9 @@ app.post("/mcp/generate_pdf", async (req, res) => {
   }
 });
 
+// ------------------------------------------------------
 // Endpoint raiz
+// ------------------------------------------------------
 app.get("/", (req, res) => {
   res.send("mcp-server alive");
 });
