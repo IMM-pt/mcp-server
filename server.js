@@ -1,6 +1,9 @@
 // FETCH
 const fetch = require("node-fetch");
 
+//PDF-LIB
+const { PDFDocument } = require('pdf-lib');
+
 // EXPRESS
 const express = require("express");
 const { PDFDocument, StandardFonts } = require("pdf-lib");
