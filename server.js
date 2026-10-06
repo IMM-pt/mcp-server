@@ -156,6 +156,26 @@ app.post("/mcp/generate_pdf", async (req, res) => {
 });
 
 // ------------------------------------------------------
+// Endpoint que compila vários PDFs (base64) num só PDF final
+// ------------------------------------------------------
+app.post("/mcp/compile_pdf", async (req, res) => {
+  try {
+    const { files } = req.body || {};
+
+    if (!Array.isArray(files) || files.length === 0) {
+      return res.status(400).json({ error: "files array is required" });
+    }
+
+    const result = await compilePdfBase64List(files);
+
+    res.json(result);
+  } catch (error) {
+    console.error("PDF compilation error:", error);
+    res.status(500).json({ error: "Failed to compile PDFs" });
+  }
+});
+
+// ------------------------------------------------------
 // Endpoint raiz
 // ------------------------------------------------------
 app.get("/", (req, res) => {
@@ -198,4 +218,3 @@ app.post("/mcp", async (req, res) => {
 app.listen(process.env.PORT || 3000, () => {
   console.log("MCP server running");
 });
-
