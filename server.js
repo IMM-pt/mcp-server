@@ -144,6 +144,7 @@ async function htmlToPdf(html) {
 
 // ------------------------------------------------------
 // Função que junta vários PDFs (base64) num só PDF final
+// (VERSÃO CORRIGIDA — sem catalog.Pages, sem computePages)
 // ------------------------------------------------------
 async function compilePdfBase64List(files) {
   const mergedPdf = await PDFDocument.create();
@@ -152,10 +153,9 @@ async function compilePdfBase64List(files) {
     const pdfBytes = Buffer.from(file.base64, "base64");
     const pdfDoc = await PDFDocument.load(pdfBytes);
 
-    const copiedPages = await mergedPdf.copyPages(
-      pdfDoc,
-      pdfDoc.getPageIndices()
-    );
+    // API correta do pdf-lib para copiar páginas
+    const pageIndices = pdfDoc.getPageIndices();
+    const copiedPages = await mergedPdf.copyPages(pdfDoc, pageIndices);
 
     copiedPages.forEach((page) => mergedPdf.addPage(page));
   }
