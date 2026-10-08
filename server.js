@@ -144,20 +144,56 @@ async function htmlToPdf(html) {
 
 // ------------------------------------------------------
 // Função que junta vários PDFs (base64) num só PDF final
-// (VERSÃO CORRIGIDA — sem catalog.Pages, sem computePages)
+// PATCH INTEGRADO: validação + logs + merge seguro
 // ------------------------------------------------------
+
+// valida se o base64 contém um PDF válido
+function isValidPdfBase64(base64) {
+  try {
+    const buffer = Buffer.from(base64, "base64");
+    const header = buffer.slice(0, 4).toString();
+    return header === "%PDF";
+  } catch {
+    return false;
+  }
+}
+
 async function compilePdfBase64List(files) {
   const mergedPdf = await PDFDocument.create();
 
-  for (const file of files) {
-    const pdfBytes = Buffer.from(file.base64, "base64");
-    const pdfDoc = await PDFDocument.load(pdfBytes);
+  const validFiles = [];
+  const invalidIndices = [];
 
-    // API correta do pdf-lib para copiar páginas
-    const pageIndices = pdfDoc.getPageIndices();
-    const copiedPages = await mergedPdf.copyPages(pdfDoc, pageIndices);
+  // validação dos PDFs
+  files.forEach((file, index) => {
+    if (isValidPdfBase64(file.base64)) {
+      validFiles.push(file);
+    } else {
+      invalidIndices.push(index);
+    }
+  });
 
-    copiedPages.forEach((page) => mergedPdf.addPage(page));
+  if (invalidIndices.length > 0) {
+    console.log("PDFs inválidos nos índices:", invalidIndices);
+  }
+
+  if (validFiles.length === 0) {
+    throw new Error("Nenhum PDF válido encontrado.");
+  }
+
+  // merge seguro
+  for (const file of validFiles) {
+    try {
+      const pdfBytes = Buffer.from(file.base64, "base64");
+      const pdfDoc = await PDFDocument.load(pdfBytes);
+
+      const pageIndices = pdfDoc.getPageIndices();
+      const copiedPages = await mergedPdf.copyPages(pdfDoc, pageIndices);
+
+      copiedPages.forEach((page) => mergedPdf.addPage(page));
+    } catch (err) {
+      console.log("Erro ao processar PDF válido:", err);
+    }
   }
 
   const mergedBytes = await mergedPdf.save();
@@ -165,7 +201,8 @@ async function compilePdfBase64List(files) {
 
   return {
     filename: "relatorio-final.pdf",
-    base64: mergedBase64
+    base64: mergedBase64,
+    invalidIndices
   };
 }
 
